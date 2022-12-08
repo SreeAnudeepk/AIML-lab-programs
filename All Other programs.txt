@@ -1,0 +1,174 @@
+ID3
+
+import pandas as pd
+from pprint import pprint
+from sklearn.feature_selection import mutual_info_classif
+
+def id3(df, target_attribute, attribute_names, default_class=None):
+    
+    from collections import Counter
+    cnt=Counter(x for x in df[target_attribute])
+    if len(cnt)==1:
+        return next(iter(cnt))
+    
+    elif df.empty or (not attribute_names):
+         return default_class
+
+    else:
+        gainz = mutual_info_classif(df[attribute_names],df[target_attribute],discrete_features=True)
+        index_of_max=gainz.tolist().index(max(gainz))
+        best_attr=attribute_names[index_of_max]
+        tree={best_attr:{}}
+        remaining_attribute_names=[i for i in attribute_names if i!=best_attr]
+        for attr_val, data_subset in df.groupby(best_attr):
+            subtree=id3(data_subset, target_attribute, remaining_attribute_names,default_class)
+        
+            tree[best_attr][attr_val]=subtree
+        
+        return tree
+    
+
+df=pd.read_csv("tennis.csv")
+
+attribute_names=df.columns.tolist()
+print("List of attribut name")
+
+attribute_names.remove("PlayTennis")
+
+for colname in df.select_dtypes("object"):
+    df[colname], _ = df[colname].factorize()
+    
+print(df)
+
+tree= id3(df,"PlayTennis", attribute_names)
+print("The tree structure")
+pprint(tree)
+
+____________________________________________________________________________________________________________________________________________________
+
+
+KNN
+
+
+import pandas as pd
+from pandas import DataFrame
+
+df_irisbd = pd.read_csv(r"iris.data",header=None,index_col=None)
+print(df_irisbd)
+X = df_irisbd.iloc[:, :-1].values
+y = df_irisbd.iloc[:, 4].values
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=0.8,random_state=100)
+print(y_test)
+print("********************************************************")
+from sklearn.neighbors import KNeighborsClassifier
+
+model = KNeighborsClassifier(n_neighbors=4)
+
+model.fit(X_train,y_train)
+
+predicted= model.predict(X_test)
+from sklearn.metrics import classification_report, confusion_matrix
+print(confusion_matrix(y_test, predicted))
+print("********************************************************")
+print(classification_report(y_test, predicted))
+
+_______________________________________________________________________________________________________________________________________________
+
+Backpropagation
+
+import numpy as np
+inputNeurons=2
+hiddenlayerNeurons=2
+outputNeurons=2
+
+input  = np.random.randint(1,10,size=(1,inputNeurons))
+output = np.array([1.0, 0.0])
+
+hidden_weights=np.random.normal(scale=0.5, size=(inputNeurons,hiddenlayerNeurons))
+output_weights=np.random.normal(scale=0.5, size=(hiddenlayerNeurons,outputNeurons))
+
+def sigmoid (layer):
+    return 1/(1 + np.exp(-layer))
+
+def gradient(layer):
+    return layer*(1-layer)
+
+for i in range(2000):
+    #Feedforward inputs
+    L1in=np.dot(input,hidden_weights)
+    L1out=sigmoid(L1in)
+
+    L2in=np.dot(L1out,output_weights)
+    L2out=sigmoid(L2in)
+
+    #Backpropogate Error
+    error = (L2out-output)
+    gradient_L2=gradient(L2out)
+    error_terms_L2=error*gradient_L2
+
+    error=np.dot(error_terms_L2, output_weights.T)
+    gradient_L1=gradient(L1out)
+    error_terms_L1=error * gradient_L1
+    
+    gradient_output_weights = np.dot(L1out.T,error_terms_L2)
+    gradient_hidden_weights = np.dot(input.T,error_terms_L1)   
+   
+    output_weights = output_weights - 0.1*gradient_output_weights
+    hidden_weights = hidden_weights - 0.1*gradient_hidden_weights
+    
+    print("**********************")
+    print("iteration:",i,"<error>:",error)
+    print("             <output>:",L2out)
+
+__________________________________________________________________________________________________________________________
+
+K means and EM
+
+from sklearn import datasets
+from sklearn import metrics
+from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
+
+iris = datasets.load_iris()
+X_train,X_test,y_train,y_test = train_test_split(iris.data,iris.target)
+model =KMeans(n_clusters=3)
+model.fit(X_train,y_train)
+Kmean=metrics.accuracy_score(y_test,model.predict(X_test))
+print(Kmean)
+#-------Expectation and Maximization----------
+from sklearn.mixture import GaussianMixture
+model2 = GaussianMixture(n_components=3)
+model2.fit(X_train,y_train)
+model2.score
+em=metrics.accuracy_score(y_test,model2.predict(X_test))
+print(em)
+
+__________________________________________________________________________________________________________________________________
+
+Locally Weighted Regression
+
+import numpy as np
+import matplotlib.pyplot as plt
+x = np.linspace(-5, 5, 1000)
+y = np.log(np.abs((x ** 2) - 1) + 0.5)
+#y=np.sin(x)
+x = x + np.random.normal(scale=0.05, size=1000)
+plt.scatter(x, y, alpha=0.3)
+def local_regression(x0, x, y, tau):
+    x0 = np.r_[1, x0]
+    x = np.c_[np.ones(len(x)), x]
+xw =x.T * radial_kernel(x0, x, tau)
+    beta = np.linalg.pinv(xw @ x) @ xw @ y
+    return x0 @ beta
+def radial_kernel(x0, x, tau):
+    return np.exp(np.sum((x - x0) ** 2, axis=1) / (-2 * tau ** 2))
+def plot_lr(tau):
+    domain = np.linspace(-5, 5, num=300)
+    pred = [local_regression(x0, x, y, tau) for x0 in domain]
+plt.scatter(x, y, alpha=0.3)
+plt.plot(domain, pred, color="red")
+    return plt
+plot_lr(0.06).show()
+
+_______________________________________________________________________________________________
